@@ -1,3 +1,20 @@
+<!--
+    ptoszek.pl
+    Powered by Jaczup
+
+    My version (ptoszek.pl): 
+    - https://github.com/jaczup/ptoszek.pl
+    Original version (theannoyingsite.com): 
+    - https://github.com/feross/TheAnnoyingSite.com/
+
+    Contact with me: https://jaczup.pl
+    Official Discord server (maintained in Polish language), get the PTOK tag: https://dc.ptoszek.pl
+    
+    Contributors:
+      @jaczup - https://github.com/jaczup
+
+    Dziurwa był tutaj 🚎
+-->
 <!doctype html>
 <html>
 <head>
@@ -30,16 +47,69 @@
       width: 300px;
     }
     @keyframes blurslowly {
-      0% { filter: none; }
-      92% { filter: blur(0); }
-      96% { filter: blur(1px); }
-      100% { filter: blur(0); }
+      0% {
+        filter: none;
+      }
+      92% {
+        filter: blur(0);
+      }
+      96% {
+        filter: blur(1px);
+      }
+      100% {
+        filter: blur(0);
+      }
+    }
+    @keyframes flashing {
+      0% { background-color: #ff0000; }
+      10% { background-color: #ff8800; }
+      20% { background-color: #ffff00; }
+      30% { background-color: #88ff00; }
+      40% { background-color: #00ff00; }
+      50% { background-color: #00ff88; }
+      60% { background-color: #00ffff; }
+      70% { background-color: #0088ff; }
+      80% { background-color: #0000ff; }
+      90% { background-color: #8800ff; }
+      100% { background-color: #ff00ff; }
+    }
+    .flashing {
+      animation: flashing 0.01s infinite !important;
     }
     body {
       animation-name: blurslowly;
       animation-iteration-count: infinite;
       animation-duration: 15s;
       animation-play-state: running;
+      background-color: white;
+      transition: background-color 0.05s;
+    }
+    #click-catcher {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      z-index: 999999;
+      background: rgba(255,255,255,0.01);
+      cursor: none;
+    }
+    #fullscreen-prompt {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: black;
+      color: white;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      z-index: 1000000;
+      font-size: 3rem;
+      font-weight: bold;
+      text-align: center;
     }
   </style>
   <link rel="icon" type="image/x-icon" href="media/images/ptok.jpg">
@@ -53,12 +123,20 @@
   <meta name="description" content="Obejrzyj zdjęcia Ptaków za frytę!">
   <meta name="theme-color" content="#34eb7d">
 </head>
-<body>
+<body onclick="onInitialClick()">
+<div id="click-catcher"></div>
+<div id="fullscreen-prompt">
+  <div>DO NOT LEAVE</div>
+  <div style="font-size: 1rem; margin-top: 20px;">Click anywhere to continue the experience</div>
+</div>
 
 <noscript>Po coś tego JavaScript wyłączył bamboszu!</noscript>
 <template>
   <div class='hello-message'>
     <h1>Siemano kolano!</h1>
+    <h2>We no walnij 3 razy w spacje.</h2>
+    <h3>(albo kliknij w ptoszka)</h3>
+
     <img src='media/images/intro.gif' alt='Cute ptok' />
   </div>
   <div class='logout-messages'></div>
@@ -72,6 +150,7 @@
   window.dataLayer = window.dataLayer || [];
   function gtag(){dataLayer.push(arguments);}
   gtag('js', new Date());
+
   gtag('config', 'G-6S5388LRGM');
 </script>
 
