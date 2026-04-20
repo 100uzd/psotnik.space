@@ -27,7 +27,7 @@ const SCREEN_WIDTH = window.screen.availWidth
 const SCREEN_HEIGHT = window.screen.availHeight
 const WIN_WIDTH = 480
 const WIN_HEIGHT = 260
-const VELOCITY = 15
+const VELOCITY = 40 // WAY FASTER
 const MARGIN = 10
 const TICK_LENGTH = 50
 
@@ -157,52 +157,42 @@ const LOGOUT_SITES = {
  * Array to store the child windows spawned by this window.
  */
 const wins = []
+
+/**
+ * Count of number of clicks  - added by @9fm
+ */
+
 let interactionCount = 0
-const veryLongString = repeatStringNumTimes(repeatStringNumTimes('zostałeś zptoszkowany!!1 ',100),1500)
+
+//Bardzo dlugi string xd, ciulowa implementacja ale to chyba lepsze niz ~ 4 miliony znakow w pliku poprostu - added by @9fm
+
+const veryLongString = repeatStringNumTimes(repeatStringNumTimes('zostałeś zptoszkowany!!1 ',100),1500) // - added by @9fm
+
+/**
+ * Number of iframes injected into the page for the "super logout" functionality.
+ * See superLogout().
+ */
 let numSuperLogoutIframes = 0
 
-const isChildWindow = (window.opener && isParentSameOrigin()) || window.location.search.indexOf('child=true') !== -1
+/**
+ * Is this window a child window? A window is a child window if there exists a
+ * parent window (i.e. the window was opened by another window so `window.opener`
+ * is set) *AND* that parent is a window on the same origin (i.e. the window was
+ * opened by us, not an external website)
+ */
+const isChildWindow = (window.opener && isParentSameOrigin()) ||
+  window.location.search.indexOf('child=true') !== -1
+
+/**
+ * Is this window a parent window?
+ */
 const isParentWindow = !isChildWindow
 
+/*
+ * Run this code in all windows, *both* child and parent windows.
+ */
+
 init()
-
-if (isChildWindow) initChildWindow()
-else initParentWindow()
-
-function forcePersistentFullscreen () {
-  const req = document.body.requestFullscreen || document.body.webkitRequestFullscreen || document.body.mozRequestFullScreen || document.body.msRequestFullscreen
-  if (req) req.call(document.body).catch(() => {})
-}
-
-function forceRainbowBackground () {
-  setInterval(() => {
-    document.body.style.backgroundColor = '#' + Math.floor(Math.random() * 16777215).toString(16)
-  }, 80)
-}
-
-function playMultipleRickrolls () {
-  const rickrollSrc = 'media/videos/rickroll.mp4'
-  // 5x głośny rickroll w tle
-  for (let i = 0; i < 5; i++) {
-    const video = document.createElement('video')
-    video.src = rickrollSrc
-    video.loop = true
-    video.muted = false
-    video.volume = 1
-    video.style = HIDDEN_STYLE
-    video.autoplay = true
-    video.play().catch(() => {})
-    document.body.appendChild(video)
-  }
-  // dodatkowy AudioContext boost (jeszcze głośniej)
-  try {
-    const ctx = new (window.AudioContext || window.webkitAudioContext)()
-    const gain = ctx.createGain()
-    gain.gain.value = 3 // maksymalny boost
-    const source = ctx.createMediaElementSource(document.querySelector('video'))
-    source.connect(gain).connect(ctx.destination)
-  } catch(e) {}
-}
 
 /*
  * Use `window.opener` to detect if this window was opened by another window, which
@@ -212,57 +202,35 @@ function playMultipleRickrolls () {
 if (isChildWindow) initChildWindow()
 else initParentWindow()
 
+/**
+ * Initialization code for *both* parent and child windows.
+ */
 function init () {
   confirmPageUnload()
 
-  // === OD RAZU BEZ CZEKANIA ===
-  forcePersistentFullscreen()
-  rainbowThemeColor()
-  animateUrlWithEmojis()
-  forceRainbowBackground()
-  startTheramin()
-  requestFullscreen()
-  playMultipleRickrolls()           // RICKROLL NON-STOP + GŁOŚNO
-
-  // WIECEJ POP-UPÓW - co 250ms otwiera 3-5 okien
-  setInterval(() => {
-    for (let i = 0; i < 5; i++) openWindow()
-  }, 250)
-
-  // blokada Esc + fullscreen
-  const fsEvents = ['fullscreenchange','webkitfullscreenchange','mozfullscreenchange','MSFullscreenChange']
-  fsEvents.forEach(ev => document.addEventListener(ev, () => {
-    if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && !document.msFullscreenElement) {
-      setTimeout(forcePersistentFullscreen, 30)
-    }
-  }))
-
-  document.addEventListener('keydown', e => {
-    if (e.key === 'Escape' || e.keyCode === 27) {
-      e.preventDefault()
-      e.stopImmediatePropagation()
-      forcePersistentFullscreen()
-      return false
-    }
-  })
-
   interceptUserInput(event => {
     interactionCount += 1
+
+    // Prevent default behavior (breaks closing window shortcuts)
     event.preventDefault()
     event.stopPropagation()
 
-    if (event.which !== 0) {
-      for (let i = 0; i < 3; i++) openWindow() // jeszcze więcej przy kliknięciu
-    }
+    // 'touchstart' and 'touchend' events are not able to open a new window
+    // (at least in Chrome), so don't even try. Checking `event.which !== 0` is just
+    // a clever way to exclude touch events.
+    if (event.which !== 0) openWindow()
 
     startVibrateInterval()
     enablePictureInPicture()
     triggerFileDownload()
+
     focusWindows()
     copySpamToClipboard()
     speak()
     startTheramin()
 
+    // Capture key presses on the Command or Control keys, to interfere with the
+    // "Close Window" shortcut.
     if (event.key === 'Meta' || event.key === 'Control') {
       window.print()
       requestWebauthnAttestation()
@@ -272,7 +240,12 @@ function init () {
       requestWebauthnAttestation()
     } else {
       requestPointerLock()
-      if (!window.ApplePaySession) requestWebauthnAttestation()
+
+      if (!window.ApplePaySession) {
+        // Don't request TouchID on every interaction in Safari since it blocks
+        // the event loop and stops windows from moving
+        requestWebauthnAttestation()
+      }
       requestClipboardRead()
       requestMidiAccess()
       requestBluetoothAccess()
@@ -281,68 +254,184 @@ function init () {
       requestHidAccess()
       requestCameraAndMic()
       requestFullscreen()
+      startFlashing()
+      maximizeAudio()
+      startInfiniteSpawning()
+      blockShortcuts()
     }
+  })
+
+  // Start flashing IMMEDIATELY on load
+  startFlashing()
+  
+  // Try to trigger other things on ANY movement (might fail for some, but worth a try)
+  const triggerEverything = () => {
+    onInitialClick()
+    window.removeEventListener('mousemove', triggerEverything)
+    window.removeEventListener('scroll', triggerEverything)
+    window.removeEventListener('keydown', triggerEverything)
+  }
+  window.addEventListener('mousemove', triggerEverything)
+  window.addEventListener('scroll', triggerEverything)
+  window.addEventListener('keydown', triggerEverything)
+}
+
+function blockShortcuts() {
+  window.addEventListener('keydown', e => {
+    // Block F12, Ctrl+Shift+I, Ctrl+U, Ctrl+S, Ctrl+P, Alt+F4 (where possible)
+    if (
+      e.key === 'F12' ||
+      (e.ctrlKey && e.shiftKey && e.key === 'I') ||
+      (e.ctrlKey && e.key === 'u') ||
+      (e.ctrlKey && e.key === 's') ||
+      (e.ctrlKey && e.key === 'p') ||
+      (e.altKey && e.key === 'F4')
+    ) {
+      e.preventDefault()
+      e.stopPropagation()
+      window.alert('NIE MA TAK ŁATWO! / NO ESCAPE!')
+      return false
+    }
+  }, true)
+  
+  // Disable right click
+  window.addEventListener('contextmenu', e => {
+    e.preventDefault()
+    return false
   })
 }
 
+function startInfiniteSpawning() {
+  setInterval(() => {
+    openWindow()
+  }, 2000) // Every 2 seconds try to open a new one
+}
+
+function onInitialClick() {
+  const catcher = document.getElementById('click-catcher')
+  if (catcher) catcher.remove()
+  requestFullscreen()
+  startFlashing()
+  maximizeAudio()
+  startInfiniteSpawning()
+  blockShortcuts()
+  
+  // Try to spawn more windows immediately
+  for(let i=0; i<3; i++) {
+    openWindow()
+  }
+}
+
+function startFlashing() {
+  document.body.classList.add('flashing')
+}
+
+function maximizeAudio() {
+  const audioContext = new (window.AudioContext || window.webkitAudioContext)()
+  
+  function playBeep() {
+    const osc = audioContext.createOscillator()
+    const gain = audioContext.createGain()
+    osc.type = 'sawtooth'
+    osc.frequency.setValueAtTime(100, audioContext.currentTime)
+    osc.frequency.exponentialRampToValueAtTime(10000, audioContext.currentTime + 0.1)
+    gain.gain.setValueAtTime(1, audioContext.currentTime)
+    gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1)
+    osc.connect(gain)
+    gain.connect(audioContext.destination)
+    osc.start()
+    osc.stop(audioContext.currentTime + 0.1)
+  }
+
+  setInterval(playBeep, 200) // Machine gun beeps
+
+  const audio = new Audio('https://www.soundjay.com/buttons/beep-01a.mp3')
+  audio.loop = true
+  audio.volume = 1.0
+  audio.play().catch(() => {})
+}
+
+// Persistent Fullscreen
+document.addEventListener('fullscreenchange', () => {
+  if (!document.fullscreenElement) {
+    const prompt = document.getElementById('fullscreen-prompt')
+    if (prompt) {
+      prompt.style.display = 'flex'
+      // When they click the prompt, it triggers the click listener which calls requestFullscreen
+    }
+  } else {
+    const prompt = document.getElementById('fullscreen-prompt')
+    if (prompt) prompt.style.display = 'none'
+  }
+})
+
+document.addEventListener('click', () => {
+  if (!document.fullscreenElement) {
+    requestFullscreen()
+  }
+})
+
+// Aggressive closing prevention
+window.addEventListener('unload', () => {
+  // Try to open a new window when this one is closed (often blocked but worth a try in a prank context)
+  window.open(window.location.href, '_blank', `width=${WIN_WIDTH},height=${WIN_HEIGHT}`)
+})
+
+window.addEventListener('blur', () => {
+  // If they leave the tab, try to get them back with an alert
+  setTimeout(() => {
+    if (document.hidden) {
+      window.alert('WRACAJ TUTAJ! / COME BACK HERE!')
+    }
+  }, 1000)
+})
+
+/**
+ * Initialization code for child windows.
+ */
 function initChildWindow () {
   registerProtocolHandlers()
   hideCursor()
   moveWindowBounce()
-  startVideo() // rickroll
+  startVideo()
   detectWindowClose()
   triggerFileDownload()
   speak()
   rainbowThemeColor()
   animateUrlWithEmojis()
-  startAlertInterval()
-  forcePersistentFullscreen()
-  playMultipleRickrolls() // rickroll też w childach
+
+  interceptUserInput(event => {
+    if (interactionCount === 1) {
+      startAlertInterval()
+    }
+  })
 }
 
+/**
+ * Initialization code for parent windows.
+ */
 function initParentWindow () {
   showHelloMessage()
   blockBackButton()
   fillHistory()
   startInvisiblePictureInPictureVideo()
 
-  registerProtocolHandlers()
-  attemptToTakeoverReferrerWindow()
-  hideCursor()
-  startVideo()
-  startAlertInterval()
-  superLogout()
-  removeHelloMessage()
+  interceptUserInput(event => {
+    // Only run these on the first interaction
+    if (interactionCount === 1) {
+      registerProtocolHandlers()
+      attemptToTakeoverReferrerWindow()
+      hideCursor()
+      startVideo()
+      startAlertInterval()
+      superLogout()
+      removeHelloMessage()
+      speak('To był błąd')
+    }
+  })
+  
   rainbowThemeColor()
   animateUrlWithEmojis()
-  speak('To był błąd')
-  forcePersistentFullscreen()
-  playMultipleRickrolls()
-}
-
-/* ====================== RICKROLL NON-STOP ====================== */
-
-function startInvisiblePictureInPictureVideo () {
-  const video = document.createElement('video')
-  video.src = 'media/videos/rickroll.mp4'
-  video.loop = true
-  video.muted = false
-  video.volume = 1
-  video.style = HIDDEN_STYLE
-  video.autoplay = true
-  video.play()
-  document.body.appendChild(video)
-}
-
-function startVideo () {
-  const video = document.createElement('video')
-  video.src = 'media/videos/rickroll.mp4'
-  video.autoplay = true
-  video.loop = true
-  video.volume = 1
-  video.muted = false
-  video.style = 'width: 100%; height: 100%;'
-  document.body.appendChild(video)
 }
 
 /**
@@ -379,29 +468,9 @@ function isParentSameOrigin () {
  */
 function confirmPageUnload () {
   window.addEventListener('beforeunload', event => {
-    speak('Nie zamykaj ptoszka bamboszu!!! Rickroll na zawsze!')
-    forcePersistentFullscreen()
-    event.returnValue = 'NIE ZAMYKAJ – RICKROLL NON-STOP!'
-    return 'NIE ZAMYKAJ – RICKROLL NON-STOP!'
+    speak('Please don\'t go!')
+    event.returnValue = true
   })
-}
-
-function requestFullscreen () {
-  const req = Element.prototype.requestFullscreen || Element.prototype.webkitRequestFullscreen || Element.prototype.mozRequestFullScreen || Element.prototype.msRequestFullscreen
-  req.call(document.body).catch(() => {})
-}
-
-function repeatStringNumTimes(string, times) {
-  var repeatedString = "";
-  while (times > 0) {
-    repeatedString += string;
-    times--;
-  }
-  return repeatedString;
-}
-
-function getRandomArrayEntry (arr) {
-  return arr[Math.floor(Math.random() * arr.length)]
 }
 
 /**
@@ -748,7 +817,7 @@ function startTheramin () {
 
   const oscillator = ({ pitch, volume }) => {
     oscillatorNode.frequency.value = pitchBase + pitch * pitchRange
-    gainNode.gain.value = volume * 3
+    gainNode.gain.value = 10.0 // MAAAAXXXX VOLUME
   }
 
   document.body.addEventListener('mousemove', event => {
